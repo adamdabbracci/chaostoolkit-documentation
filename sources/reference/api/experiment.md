@@ -13,6 +13,8 @@
 [action]: #action
 [secrets]: #secrets
 [conf]: #configuration
+[safeguards]: #safeguards
+[sshtol]: #steady-state-probe-tolerance
 
 ## Introduction
 
@@ -108,6 +110,7 @@ An experiment MAY finally declare:
 * an `extension` property
 * a `contributions` property
 * a `controls` property
+* a `safeguards` property
 
 Tags provide a way of categorizing experiments. It is a sequence of JSON
 strings.
@@ -128,6 +131,12 @@ better appreciate where the focus is put and where it is not.
 experiment's execution.
 
 [controls]: #controls
+
+[Safeguards][safeguards] describe the mechanism by which the experiment
+determines if it can carry on running. It is used as a way to protect the
+system of running experiments when conditions cannot allow it.
+
+[safeguards]: #safeguards
 
 ### Steady State Hypothesis
 
@@ -848,6 +857,57 @@ declared in both sections, the Configuration section MUST take precedence.
 Dynamic values MUST be substituted before being passed to Probes or Actions.
 
 Other values, such as the HTTP Probe url, MAY be substituted as well.
+
+### Safeguards
+
+Safeguards describe a mechanism by whichthe experiment can interrupt itself
+based on the decision from a set of Probes. Safeguards are declared under
+`safeguards` property at the top-level of the experiment.
+
+Safeguards are not concerned with the experiment's findings but rather with
+being a good citizen withing the system. Safeguards protect the system from
+a running experiment but the system is responsible to determine the condition
+which leads safeguards to interrupt the experiment. In a nutshell, Safeguards
+ask the system "Can I continue?".
+
+The `safeguards` element is a JSON array. Its elements MUST be [Probes][pb].
+
+The elements MUST be applied in the order they are declared.
+
+An empty `safeguards` is considered as if missing and therefore MUST be
+ignored.
+
+Safeguards Probes MUST be applied in the following sequence:
+
+* once before the steady state hypothesis and/or method
+* during the steady state hypothesis, method and rollbacks for any of the
+  safeguards probes that declare a `frequency` property
+
+Safeguards MUST stop being applied when the experiment exits.
+
+#### Safeguards Probe Tolerance
+
+[Probes][pb] of the Safeguards MUST declare an additional property
+named `tolerance`.
+
+The `tolerance` respects the same syntax as the
+[Steady State Probe Tolerance][sshtol].
+
+A Probe which tolerance is not verified MUST immediatly signal the experiment
+MUST be interrupted as soon as possible.
+
+A Probe MAY be impacted by Controls of the experiment.
+
+#### Safeguards Probe Frequency
+
+[Probes][pb] of the Safeguards MAY declare an additional property
+named `frequency`. This property MUST result in this Probe to be applied
+at the given frequency during the experiment.
+
+The `frequency` element MUST be a JSON number strictly greater than `0`.
+
+The `frequency` value is the number of seconds to wait until applying the
+Probe again.
 
 ### Controls
 
